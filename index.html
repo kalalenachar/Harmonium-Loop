@@ -300,6 +300,80 @@
             text-shadow: 0 0 20px rgba(0,255,136,0.5);
             min-height: 1.2em;
         }
+
+        /* Library Section */
+        .library-section {
+            background: #252525;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px; /* Changed from margin-bottom for V7 */
+            margin-bottom: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .library-section label {
+            margin: 0;
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .library-section select {
+            flex: 1;
+            min-width: 200px;
+        }
+        .library-section button {
+            background: #333;
+            color: #00ff88;
+            border: 1px solid #444;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+        .library-section button:hover { background: #444; }
+
+        /* ========== MOBILE RESPONSIVE ========== */
+        @media screen and (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 15px; width: 100%; box-sizing: border-box; }
+            h1 { font-size: 1.5em; margin-bottom: 15px; }
+            .control-row { grid-template-columns: 1fr; gap: 15px; }
+            .library-section { flex-direction: column; align-items: stretch; }
+            .library-section select { width: 100%; min-width: 100%; }
+            .library-section button { width: 100%; padding: 12px; }
+            .grid-header { flex-direction: column; align-items: stretch; }
+            .grid-controls { flex-wrap: wrap; justify-content: stretch; }
+            .grid-controls button { flex: 1; min-width: 80px; }
+            .grid-cell { min-height: 40px; font-size: 0.95em; padding: 8px 2px; }
+            .swara-palette { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; padding: 12px; }
+            .swara-btn { padding: 10px 3px; font-size: 0.85em; min-height: 40px; }
+            .action-buttons { grid-template-columns: 1fr; gap: 10px; }
+            button.primary, button.secondary { padding: 12px; font-size: 1em; }
+            .current-note { font-size: 2em; margin: 15px 0; }
+            .tempo-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            .tempo-btn { padding: 8px; }
+            .duration-badge { margin-top: 8px; padding: 6px; }
+            .beats-input { width: 50px !important; }
+            .toggle-grid-btn { width: 100%; text-align: center; padding: 10px; }
+        }
+        @media screen and (max-width: 400px) {
+            h1 { font-size: 1.3em; }
+            .grid-cell { min-height: 35px; font-size: 0.85em; }
+            .swara-palette { grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); }
+            .swara-btn { padding: 8px 2px; font-size: 0.75em; min-height: 35px; }
+            .current-note { font-size: 1.5em; }
+            .library-section label { font-size: 0.9em; }
+            .library-section button { font-size: 0.85em; padding: 10px; }
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .grid-cell, .swara-btn, button { -webkit-tap-highlight-color: rgba(0, 255, 136, 0.3); }
+            .swara-btn { min-height: 44px; }
+            .grid-cell { min-height: 44px; }
+            button.primary, button.secondary { min-height: 48px; }
+        }
+
     </style>
 </head>
 <body>
@@ -371,10 +445,22 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-        <button class="secondary" onclick="importPattern()">📥 Import Text</button>
+        <button class="secondary" onclick="importFullSetup()">📥 Load Setup</button>
         <button class="primary" id="toggleBtn">▶ Start Loop</button>
-        <button class="secondary" onclick="exportPattern()">📋 Export Text</button>
+        <button class="secondary" onclick="exportFullSetup()">💾 Save Setup</button>
     </div>
+
+    <!-- Library Section -->
+    <div class="library-section">
+        <label>📚 Library:</label>
+        <select id="libraryDropdown" onchange="loadFromLibrary()">
+            <option value="">-- Select a saved setup --</option>
+        </select>
+        <button onclick="importMultipleFiles()">+ Add Files</button>
+        <button onclick="importFolder()">+ Add Folder</button>
+        <button onclick="clearLibrary()">Clear All</button>
+    </div>
+
 
     <!-- Current Note Display -->
     <div class="current-note" id="displaySwara">—</div>
@@ -408,9 +494,10 @@ const swaraMap = {
 };
 
 const swaraButtons = [
-    ['S', 'R1', 'R2', 'R3', 'G2', 'G3', 'M1', 'M2'],
-    ['P', 'D1', 'D2', 'D3', 'N1', 'N2', 'N3', ','],
-    ['.S', '.N3', '.D1', '.P', '.M1', "S'", "P'", "S''"]
+    ['.G2', '.G3', '.M1', '.M2', '.P', '.D1', '.D2', '.D3', '.N1', '.N2', '.N3'],
+    ['S', 'R1', 'R2', 'R3', 'G2', 'G3', 'M1', 'M2', 'P', 'D1', 'D2', 'D3', 'N1', 'N2', 'N3'],
+    ["S'", "R1'", "R2'", "R3'", "G2'", "G3'", "M1'", "M2'", "P'"],
+    [',']
 ];
 
 function initAudio() {
@@ -644,7 +731,7 @@ function getSequence() {
         const swara = item.swara;
         
         if (!swara) {
-            return;
+            return; // Skip empty cells
         }
         
         if (swara === ',' || swara === '-') {
@@ -781,6 +868,171 @@ document.getElementById('toggleBtn').addEventListener('click', function() {
         isPlaying = true;
     }
 });
+
+
+function exportFullSetup() {
+    try {
+        const setup = {
+            pitch: document.getElementById('saFreq').value,
+            tempo: document.getElementById('bpm').value,
+            beatsPerRow: document.getElementById('beatsPerRow').value,
+            pattern: gridData.map(d => d.swara)
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(setup, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "harmonium_setup.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    } catch (error) {
+        alert("Could not export setup.");
+    }
+}
+
+function importFullSetup() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const setup = JSON.parse(event.target.result);
+                if (!setup.pitch || !setup.tempo || !setup.beatsPerRow || !setup.pattern) throw new Error("Invalid");
+                document.getElementById('saFreq').value = setup.pitch;
+                document.getElementById('bpm').value = setup.tempo;
+                document.getElementById('beatsPerRow').value = setup.beatsPerRow;
+                const cols = parseInt(setup.beatsPerRow) || 8;
+                const finalRows = Math.max(1, Math.ceil(setup.pattern.length / cols));
+                initGrid(finalRows, false);
+                setup.pattern.forEach((token, index) => {
+                    if (token && index < gridData.length) {
+                        selectedCell = gridData[index].cell;
+                        fillSelectedCell(token, false);
+                    }
+                });
+                selectedCell = null;
+                calculateDuration();
+                alert("Setup loaded!");
+            } catch (error) {
+                alert("Invalid file.");
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+
+// Library Management
+let setupLibrary = {};
+
+function importMultipleFiles() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.multiple = true;
+    input.onchange = e => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        let successCount = 0, failCount = 0;
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const setup = JSON.parse(event.target.result);
+                    if (!setup.pitch || !setup.tempo || !setup.beatsPerRow || !setup.pattern) throw new Error("Invalid");
+                    setupLibrary[file.name] = setup;
+                    successCount++;
+                    updateLibraryDropdown();
+                } catch (error) {
+                    failCount++;
+                }
+                if (successCount + failCount === files.length) {
+                    alert(`Import complete!\n✓ ${successCount} ✗ ${failCount}`);
+                }
+            };
+            reader.readAsText(file);
+        });
+    };
+    input.click();
+}
+
+function importFolder() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.webkitdirectory = true;
+    input.onchange = e => {
+        const files = Array.from(e.target.files).filter(f => f.name.endsWith('.json'));
+        if (files.length === 0) return alert("No JSON files found in folder.");
+        let successCount = 0, failCount = 0;
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const setup = JSON.parse(event.target.result);
+                    if (!setup.pitch || !setup.tempo || !setup.beatsPerRow || !setup.pattern) throw new Error("Invalid");
+                    setupLibrary[file.name] = setup;
+                    successCount++;
+                    updateLibraryDropdown();
+                } catch (error) {
+                    failCount++;
+                }
+                if (successCount + failCount === files.length) {
+                    alert(`Folder import complete!\n✓ ${successCount} ✗ ${failCount}`);
+                }
+            };
+            reader.readAsText(file);
+        });
+    };
+    input.click();
+}
+
+function updateLibraryDropdown() {
+    const dropdown = document.getElementById('libraryDropdown');
+    dropdown.innerHTML = '<option value="">-- Select a saved setup --</option>';
+    Object.keys(setupLibrary).sort().forEach(filename => {
+        const option = document.createElement('option');
+        option.value = filename;
+        option.textContent = filename.replace('.json', '');
+        dropdown.appendChild(option);
+    });
+}
+
+function loadFromLibrary() {
+    const filename = document.getElementById('libraryDropdown').value;
+    if (!filename || !setupLibrary[filename]) return;
+    try {
+        const setup = setupLibrary[filename];
+        document.getElementById('saFreq').value = setup.pitch;
+        document.getElementById('bpm').value = setup.tempo;
+        document.getElementById('beatsPerRow').value = setup.beatsPerRow;
+        const cols = parseInt(setup.beatsPerRow) || 8;
+        const finalRows = Math.max(1, Math.ceil(setup.pattern.length / cols));
+        initGrid(finalRows, false);
+        setup.pattern.forEach((token, index) => {
+            if (token && index < gridData.length) {
+                selectedCell = gridData[index].cell;
+                fillSelectedCell(token, false);
+            }
+        });
+        selectedCell = null;
+        calculateDuration();
+    } catch (error) {
+        alert("Could not load from library.");
+    }
+}
+
+function clearLibrary() {
+    if (Object.keys(setupLibrary).length === 0) return alert("Library is empty.");
+    if (confirm(`Clear all ${Object.keys(setupLibrary).length} setups?`)) {
+        setupLibrary = {};
+        updateLibraryDropdown();
+    }
+}
 
 // Initialize
 initGrid(4);
