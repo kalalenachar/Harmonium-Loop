@@ -644,8 +644,6 @@ function getSequence() {
         const swara = item.swara;
         
         if (!swara) {
-            // Silence
-            sequence.push({ freq: 0, beats: 1, label: "—", cellIndex: item.cell.dataset.index });
             return;
         }
         
