@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonium Loop Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            width: 95%;
+            max-width: 900px;
+        }
+
+        h1 { margin-top: 0; color: #00ff88; font-weight: 300; text-align: center; }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: start; 
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        label { 
+            font-size: 0.85em; 
+            color: #aaa; 
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input[type="number"], select {
+            background: #333;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 1em;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Duration Display Badge */
+        .duration-badge {
+            margin-top: 10px;
+            background: linear-gradient(135deg, #ff00cc, #333399);
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .duration-val {
+            font-size: 1.2em;
+            font-family: 'Consolas', monospace;
+        }
+
+        /* Tempo Buttons */
+        .tempo-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .tempo-btn {
+            background: #2a2a2a;
+            color: #ccc;
+            border: 1px solid #444;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            flex: 1; 
+            transition: background 0.1s;
+        }
+        .tempo-btn:hover { background: #3a3a3a; color: white; }
+
+        /* Grid Section */
+        .grid-section {
+            background: #252525;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .grid-section.hidden {
+            display: none;
+        }
+
+        .grid-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .grid-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .grid-controls button {
+            background: #333;
+            color: #00ff88;
+            border: 1px solid #444;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .grid-controls button:hover { background: #444; }
+
+        .beats-input {
+            width: 60px !important;
+            padding: 5px !important;
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        .swara-grid {
+            display: grid;
+            /* grid-template-columns set by JS */
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .grid-cell {
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 6px;
+            padding: 10px 2px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .grid-cell:hover {
+            border-color: #00ff88;
+            background: #252525;
+        }
+
+        .grid-cell.active {
+            background: #00ff88;
+            color: #000;
+            border-color: #00ff88;
+            animation: pulse 0.3s ease;
+        }
+
+        .grid-cell.filled {
+            background: #2a2a3e;
+            border-color: #4a4a6e;
+            color: #00ff88;
+        }
+
+        .grid-cell .delete-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ff4b4b;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 14px;
+            height: 14px;
+            font-size: 0.6em;
+            cursor: pointer;
+            display: none;
+            line-height: 14px;
+            padding: 0;
+        }
+
+        .grid-cell.filled:hover .delete-btn {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Swara Palette */
+        .swara-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            gap: 8px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #1a1a1a;
+            border-radius: 8px;
+        }
+
+        .swara-btn {
+            background: #333;
+            color: #00ff88;
+            border: 1px solid #444;
+            padding: 12px 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.1s;
+            font-size: 0.95em;
+        }
+        .swara-btn:hover {
+            background: #00ff88;
+            color: #000;
+            transform: translateY(-2px);
+        }
+        .swara-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Control Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button.primary {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        button.primary:hover { transform: scale(1.02); }
+        button.primary.stop { background: #ff4b4b; color: white; }
+
+        button.secondary {
+            background: #333;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            padding: 15px;
+            font-size: 1em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button.secondary:hover { background: #444; }
+
+        .toggle-grid-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #aaa;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            display: block;
+            margin-left: auto;
+        }
+        .toggle-grid-btn:hover { color: #fff; border-color: #666; }
+
+        .current-note {
+            text-align: center;
+            font-size: 3em;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(0,255,136,0.5);
+            min-height: 1.2em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎹 Harmonium Loop</h1>
+
+    <!-- Pitch & Tempo Controls -->
+    <div class="control-row">
+        <!-- Pitch Selection -->
+        <div class="input-group">
+            <label>Pitch (Sa)</label>
+            <select id="saFreq">
+                <option value="130.81">C (130.81 Hz)</option>
+                <option value="138.59" selected>C# (138.59 Hz)</option>
+                <option value="146.83">D (146.83 Hz)</option>
+                <option value="155.56">D# (155.56 Hz)</option>
+                <option value="164.81">E (164.81 Hz)</option>
+                <option value="174.61">F (174.61 Hz)</option>
+                <option value="185.00">F# (185.00 Hz)</option>
+                <option value="196.00">G (196.00 Hz)</option>
+                <option value="207.65">G# (207.65 Hz)</option>
+                <option value="220.00">A (220.00 Hz)</option>
+                <option value="233.08">A# (233.08 Hz)</option>
+                <option value="246.94">B (246.94 Hz)</option>
+            </select>
+        </div>
+
+        <!-- Tempo Group -->
+        <div class="input-group">
+            <label>Tempo (BPM)</label>
+            <input type="number" id="bpm" value="60" step="1" oninput="calculateDuration()">
+            <div class="tempo-controls">
+                <button class="tempo-btn" onclick="adjustBPM(0.5)">÷2</button>
+                <button class="tempo-btn" onclick="adjustBPM(-5)">-5</button>
+                <button class="tempo-btn" onclick="adjustBPM(5)">+5</button>
+                <button class="tempo-btn" onclick="adjustBPM(2)">×2</button>
+            </div>
+            <!-- DURATION DISPLAY -->
+            <div class="duration-badge">
+                Loop: <span class="duration-val" id="durationDisplay">0.00s</span>
+            </div>
+        </div>
+    </div>
+    
+    <button class="toggle-grid-btn" id="toggleGridBtn" onclick="toggleGrid()">Hide Grid ▲</button>
+
+    <!-- Grid Section -->
+    <div class="grid-section" id="gridSection">
+        <div class="grid-header">
+            <span style="font-weight: bold; color: #00ff88;">Pattern Grid</span>
+            <div class="grid-controls">
+                <label style="margin:0; color:#fff;">Beats/Row:</label>
+                <input type="number" id="beatsPerRow" class="beats-input" value="8" min="1" max="32" onchange="refreshGridKeepData()">
+                
+                <div style="border-left: 1px solid #444; height: 20px; margin: 0 10px;"></div>
+
+                <button onclick="addRow()">+ Row</button>
+                <button onclick="removeRow()">− Row</button>
+                <button onclick="clearGrid()">Clear</button>
+            </div>
+        </div>
+        
+        <div id="gridContainer"></div>
+
+        <!-- Swara Palette -->
+        <div class="swara-palette" id="swaraPalette"></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button class="secondary" onclick="importPattern()">📥 Import Text</button>
+        <button class="primary" id="toggleBtn">▶ Start Loop</button>
+        <button class="secondary" onclick="exportPattern()">📋 Export Text</button>
+    </div>
+
+    <!-- Current Note Display -->
+    <div class="current-note" id="displaySwara">—</div>
+    
+</div>
+
+<script>
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+let isPlaying = false;
+let schedulerTimer = null;
+let nextNoteTime = 0;
+let cellIndex = 0;
+let gridData = [];
+let selectedCell = null;
+let isGridVisible = true;
+
+// Swara Mapping
+const swaraMap = {
+    'S': 0, 'R1': 1, 'R2': 2, 'R3': 3, 
+    'G1': 2, 'G2': 3, 'G3': 4,
+    'M1': 5, 'M2': 6, 'P': 7, 
+    'D1': 8, 'D2': 9, 'D3': 10,
+    'N1': 9, 'N2': 10, 'N3': 11,
+    '.S': -12, '.N3': -1, '.N2': -2, '.N1': -3,
+    '.D3': -2, '.D2': -3, '.D1': -4, '.P': -5,
+    '.M2': -6, '.M1': -7, '.G3': -8, '.G2': -9, '.G1': -10,
+    '.R3': -9, '.R2': -10, '.R1': -11,
+    "S'": 12, "R1'": 13, "R2'": 14, "R3'": 15,
+    "G1'": 14, "G2'": 15, "G3'": 16, "M1'": 17, "M2'": 18, "P'": 19
+};
+
+const swaraButtons = [
+    ['S', 'R1', 'R2', 'R3', 'G2', 'G3', 'M1', 'M2'],
+    ['P', 'D1', 'D2', 'D3', 'N1', 'N2', 'N3', ','],
+    ['.S', '.N3', '.D1', '.P', '.M1', "S'", "P'", "S''"]
+];
+
+function initAudio() {
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function adjustBPM(factor) {
+    const input = document.getElementById('bpm');
+    let current = parseFloat(input.value);
+    
+    if (factor === 2 || factor === 0.5) {
+        current = current * factor;
+    } else {
+        current = current + factor;
+    }
+    
+    if(current < 10) current = 10;
+    if(current > 600) current = 600;
+    
+    input.value = Math.round(current);
+    calculateDuration(); 
+}
+
+function calculateDuration() {
+    const bpm = parseFloat(document.getElementById('bpm').value) || 60;
+    let totalBeats = 0;
+    
+    gridData.forEach(item => {
+        if (!item.swara) return;
+        totalBeats += 1; // Simplification: 1 cell = 1 beat for duration calculation
+    });
+
+    // If grid has empty cells, do we count them as silence or skip? 
+    // Usually looping implies playing the whole grid structure including silences if defined.
+    // For now, let's just count ALL cells as beats if we treat the grid as a timeline.
+    // BUT the user might leave trailing empty cells.
+    // Let's stick to counting filled cells + extensions for now, or just all cells if that makes more sense for a "grid".
+    // Better: Count until the last filled cell.
+    
+    // REVISED DURATION: Total Grid Capacity (Rows * Cols) * Beat Duration
+    // This allows the loop to be stable even if you miss a note in the middle.
+    
+    const rows = document.getElementById('gridContainer').children.length;
+    const cols = parseInt(document.getElementById('beatsPerRow').value) || 8;
+    const totalCells = rows * cols;
+    
+    const seconds = (60 / bpm) * totalCells;
+    document.getElementById('durationDisplay').innerText = seconds.toFixed(2) + 's';
+}
+
+function toggleGrid() {
+    const grid = document.getElementById('gridSection');
+    const btn = document.getElementById('toggleGridBtn');
+    
+    if(isGridVisible) {
+        grid.classList.add('hidden');
+        btn.innerText = "Show Grid ▼";
+        isGridVisible = false;
+    } else {
+        grid.classList.remove('hidden');
+        btn.innerText = "Hide Grid ▲";
+        isGridVisible = true;
+    }
+}
+
+function refreshGridKeepData() {
+    const rows = document.getElementById('gridContainer').children.length || 4;
+    initGrid(rows, true);
+}
+
+function initGrid(rows = 4, keepData = false) {
+    const container = document.getElementById('gridContainer');
+    const cols = parseInt(document.getElementById('beatsPerRow').value) || 8;
+    
+    let oldSwaraList = [];
+    if(keepData) {
+        // Flatten current grid data to a simple list
+        oldSwaraList = gridData.map(d => d.swara);
+    }
+
+    container.innerHTML = '';
+    gridData = [];
+    
+    for (let i = 0; i < rows; i++) {
+        const row = document.createElement('div');
+        row.className = 'swara-grid';
+        row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        
+        for (let j = 0; j < cols; j++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.dataset.index = gridData.length;
+            cell.innerHTML = '—';
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                clearCell(cell.dataset.index);
+            };
+            cell.appendChild(deleteBtn);
+            
+            cell.onclick = () => selectCell(cell);
+            row.appendChild(cell);
+            gridData.push({ swara: null, cell: cell });
+        }
+        container.appendChild(row);
+    }
+
+    if(keepData && oldSwaraList.length > 0) {
+        // Refill data linearly
+        oldSwaraList.forEach((swara, idx) => {
+            if(idx < gridData.length && swara) {
+                selectedCell = gridData[idx].cell;
+                fillSelectedCell(swara, false);
+            }
+        });
+        selectedCell = null;
+    }
+    calculateDuration();
+}
+
+function initPalette() {
+    const palette = document.getElementById('swaraPalette');
+    palette.innerHTML = '';
+    
+    swaraButtons.flat().forEach(swara => {
+        const btn = document.createElement('button');
+        btn.className = 'swara-btn';
+        btn.innerText = swara;
+        btn.onclick = () => fillSelectedCell(swara);
+        palette.appendChild(btn);
+    });
+}
+
+function selectCell(cell) {
+    if (selectedCell) selectedCell.classList.remove('active');
+    selectedCell = cell;
+    cell.classList.add('active');
+}
+
+function fillSelectedCell(swara, autoAdvance = true) {
+    if (!selectedCell) return;
+    
+    const idx = selectedCell.dataset.index;
+    gridData[idx].swara = swara;
+    selectedCell.innerHTML = swara + '<button class="delete-btn" onclick="event.stopPropagation(); clearCell(' + idx + ')">×</button>';
+    selectedCell.classList.add('filled');
+    selectedCell.classList.remove('active');
+    
+    // calculateDuration(); // Update not strictly needed if we use grid capacity
+
+    if(autoAdvance) {
+        const nextIdx = parseInt(idx) + 1;
+        if (nextIdx < gridData.length) {
+            selectCell(gridData[nextIdx].cell);
+        } else {
+            selectedCell = null;
+        }
+    }
+}
+
+function clearCell(idx) {
+    gridData[idx].swara = null;
+    gridData[idx].cell.innerHTML = '—<button class="delete-btn" onclick="event.stopPropagation(); clearCell(' + idx + ')">×</button>';
+    gridData[idx].cell.classList.remove('filled');
+}
+
+function addRow() {
+    const currentRows = document.getElementById('gridContainer').children.length;
+    initGrid(currentRows + 1, true);
+}
+
+function removeRow() {
+    const currentRows = document.getElementById('gridContainer').children.length;
+    if (currentRows > 1) initGrid(currentRows - 1, true);
+}
+
+function clearGrid() {
+    if (confirm('Clear all swaras?')) {
+        gridData.forEach((item, idx) => clearCell(idx));
+    }
+}
+
+function exportPattern() {
+    const pattern = gridData
+        .filter(item => item.swara)
+        .map(item => item.swara)
+        .join(' ');
+    
+    navigator.clipboard.writeText(pattern).then(() => {
+        alert('Pattern copied to clipboard!\n\n' + pattern);
+    }, () => {
+        prompt('Pattern (manual copy):', pattern || 'Empty pattern');
+    });
+}
+
+function importPattern() {
+    const text = prompt("Paste your swara pattern here (separated by spaces or |):");
+    if (!text) return;
+
+    const tokens = text.replace(/\|/g, ' ').split(/\s+/).filter(t => t.length > 0);
+    
+    if(tokens.length === 0) return alert("No valid swaras found.");
+
+    const cols = parseInt(document.getElementById('beatsPerRow').value) || 8;
+    const neededRows = Math.ceil(tokens.length / cols);
+    const finalRows = Math.max(4, neededRows);
+    
+    initGrid(finalRows, false);
+
+    tokens.forEach((token, index) => {
+        if(index < gridData.length) {
+            selectedCell = gridData[index].cell;
+            fillSelectedCell(token, false);
+        }
+    });
+    
+    selectedCell = null;
+    calculateDuration();
+}
+
+function getSequence() {
+    const sa = parseFloat(document.getElementById('saFreq').value);
+    const sequence = [];
+    
+    gridData.forEach(item => {
+        // Treat empty cells as rests/silence
+        const swara = item.swara;
+        
+        if (!swara) {
+            // Silence
+            sequence.push({ freq: 0, beats: 1, label: "—", cellIndex: item.cell.dataset.index });
+            return;
+        }
+        
+        if (swara === ',' || swara === '-') {
+            if (sequence.length > 0) {
+                sequence[sequence.length - 1].beats += 1;
+            } else {
+                // Extension at start? Treat as rest.
+                sequence.push({ freq: 0, beats: 1, label: "—", cellIndex: item.cell.dataset.index });
+            }
+            return;
+        }
+        
+        const semitones = swaraMap[swara] !== undefined ? swaraMap[swara] : 0;
+        const freq = sa * Math.pow(2, semitones / 12);
+        
+        sequence.push({ freq, beats: 1, label: swara, cellIndex: item.cell.dataset.index });
+    });
+    
+    return sequence;
+}
+
+function playTone(freq, duration, label, cellIdx) {
+    if(isGridVisible) {
+        gridData.forEach(item => item.cell.classList.remove('active'));
+        if (cellIdx !== undefined && gridData[cellIdx]) {
+            gridData[cellIdx].cell.classList.add('active');
+        }
+    }
+    
+    document.getElementById('displaySwara').innerText = label;
+    
+    if (freq <= 0) return;
+
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+    osc1.frequency.value = freq;
+    osc2.frequency.value = freq * 1.002;
+    
+    const masterVol = 0.5;
+    const vol = masterVol * 0.2;
+
+    const now = audioCtx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.02);
+    gain.gain.setValueAtTime(vol, now + duration - 0.02);
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + duration);
+    osc2.stop(now + duration);
+}
+
+function scheduleNext() {
+    const sequence = getSequence();
+    if (sequence.length === 0) return stopPlayback();
+    
+    const bpm = parseFloat(document.getElementById('bpm').value);
+    const secondsPerBeat = 60.0 / bpm;
+    const lookahead = 0.1;
+
+    while (nextNoteTime < audioCtx.currentTime + lookahead) {
+        const note = sequence[cellIndex];
+        // If it's an extension in the grid that was merged in getSequence, we only see the main note.
+        // But getSequence logic above merges beats.
+        // Wait, getSequence iterates GRID CELLS. If I have S , ,
+        // getSequence produces: 
+        // 1. S (beats=3, cellIndex=0)
+        // It skips the loop iterations for the comma cells? No.
+        
+        // CORRECTION on getSequence logic:
+        // We need to be careful. If I have 16 cells, I want the visual highlighter to move cell by cell.
+        // But the audio event is one long note.
+        // If I want the highlighter to move, I should probably schedule "visual events" separately or 
+        // just keep it simple: 1 cell = 1 audio event.
+        // If it's a comma, we play the SAME frequency again? No, that re-triggers attack.
+        // Harmoniums hold the note.
+        
+        // For simplicity in this grid-based looper:
+        // Let's treat everything as 1 beat. 
+        // If user puts ',', we play the previous freq but don't re-trigger envelope? 
+        // OR simpler: Just re-trigger. It sounds like pumping/pulsing which is fine for practice rhythm.
+        // User asked for "loop".
+        
+        // Let's stick to the current "merged beats" logic for audio, 
+        // BUT visual highlighting will jump to the *start* of the note.
+        // If we want highlighting to traverse commas, we'd need more complex logic.
+        // Given constraints, the current logic highlights the START of the note.
+        
+        playTone(note.freq, note.beats * secondsPerBeat, note.label, note.cellIndex);
+        
+        nextNoteTime += note.beats * secondsPerBeat;
+        cellIndex = (cellIndex + 1) % sequence.length;
+    }
+    
+    schedulerTimer = setTimeout(scheduleNext, 25);
+}
+
+function stopPlayback() {
+    clearTimeout(schedulerTimer);
+    document.getElementById('toggleBtn').innerText = "▶ Start Loop";
+    document.getElementById('toggleBtn').classList.remove('stop');
+    document.getElementById('displaySwara').innerText = "—";
+    gridData.forEach(item => item.cell.classList.remove('active'));
+    isPlaying = false;
+}
+
+document.getElementById('toggleBtn').addEventListener('click', function() {
+    initAudio();
+
+    if (isPlaying) {
+        stopPlayback();
+    } else {
+        // Recalc sequence every start to be safe
+        const sequence = getSequence();
+        // Allow empty sequence (silence loop) if they really want, but usually alert
+        // But we need at least gridData
+        if (gridData.length === 0) return alert("Grid is empty!");
+        
+        cellIndex = 0;
+        nextNoteTime = audioCtx.currentTime + 0.05;
+        scheduleNext();
+        
+        this.innerText = "⏹ Stop Loop";
+        this.classList.add('stop');
+        isPlaying = true;
+    }
+});
+
+// Initialize
+initGrid(4);
+initPalette();
+</script>
+
+</body>
+</html>
